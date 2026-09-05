@@ -1,0 +1,23 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/crates/oxc_linter/src/rules.rs",
+  "rules": {
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-floating-promises": "warn",
+    "no-console": "warn",
+    "no-undef": "warn",
+    "no-unused-vars": "warn"
+  },
+  "env": {
+    "node": true
+  },
+  "globals": {
+    "describe": "readonly",
+    "it": "readonly",
+    "expect": "readonly",
+    "beforeEach": "readonly",
+    "afterEach": "readonly",
+    "beforeAll": "readonly",
+    "afterAll": "readonly",
+    "vi": "readonly"
+  }
+}
