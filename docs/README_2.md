@@ -20,37 +20,29 @@ npm run lint          # oxlint, harus bersih dari error
 npm run test:cov      # vitest + coverage, hasilin coverage/lcov.info
 ```
 
-SonarQube Scan lokal (opsional, buat cek sebelum push). Di CI, `SONAR_HOST_URL` dan `SONAR_TOKEN` diambil dari secrets dan mengarah ke server SonarQube yang sudah ada. Buat run di lokal tanpa server itu, paling gampang jalanin SonarQube Community Edition sendiri lewat Docker:
+SonarQube Scan lokal (opsional, buat cek sebelum push). Karena repo ini public, CI scan-nya diarahkan ke **SonarCloud** (`sonar.host.url` default-nya memang `https://sonarcloud.io`, gratis buat repo public) dengan `sonar.organization=mrzacq` di [sonar-project.properties](../sonar-project.properties) — jadi nggak perlu hosting SonarQube sendiri. Buat scan dari lokal ke project SonarCloud yang sama:
+
+1. Generate token di SonarCloud: **My Account → Security → Generate Token**.
+2. Generate coverage dan jalanin scanner:
 
 ```bash
-# 1. Jalanin SonarQube server lokal (sekali aja, biarin jalan di background)
-docker run -d --name sonarqube -p 9000:9000 sonarqube:community
-
-# tunggu ~1 menit sampai siap, lalu buka http://localhost:9000
-# login admin/admin (bakal diminta ganti password saat login pertama)
-```
-
-Setelah itu, generate token: di UI SonarQube buka **My Account → Security → Generate Token**, simpan token-nya.
-
-```bash
-# 2. Generate coverage dulu
 npm run test:cov      # hasilin coverage/lcov.info, dibaca lewat sonar-project.properties
 
-# 3a. Scan pakai sonar-scanner yang ter-install lokal (brew install sonar-scanner)
+# pakai sonar-scanner yang ter-install lokal (brew install sonar-scanner)
 sonar-scanner \
-  -Dsonar.host.url=http://localhost:9000 \
-  -Dsonar.token=<TOKEN_DARI_LANGKAH_GENERATE_TOKEN>
+  -Dsonar.host.url=https://sonarcloud.io \
+  -Dsonar.token=<TOKEN_DARI_SONARCLOUD>
 
-# 3b. Atau tanpa install, pakai image Docker resmi
-docker run --rm -v "$(pwd):/usr/src" --network host \
-  -e SONAR_HOST_URL=http://localhost:9000 \
-  -e SONAR_TOKEN=<TOKEN_DARI_LANGKAH_GENERATE_TOKEN> \
+# atau tanpa install, pakai image Docker resmi
+docker run --rm -v "$(pwd):/usr/src" \
+  -e SONAR_HOST_URL=https://sonarcloud.io \
+  -e SONAR_TOKEN=<TOKEN_DARI_SONARCLOUD> \
   sonarsource/sonar-scanner-cli
 ```
 
-Catatan: `--network host` cuma jalan di Linux supaya container bisa nembak `localhost:9000` di host. Di Docker Desktop (Mac/Windows), ganti jadi `-e SONAR_HOST_URL=http://host.docker.internal:9000` dan hilangkan `--network host`.
+Hasil scan bisa dilihat di `https://sonarcloud.io/project/overview?id=notes-app&organization=mrzacq`.
 
-Hasil scan bisa dilihat di `http://localhost:9000/dashboard?id=notes-app` (sesuai `sonar.projectKey` di [sonar-project.properties](../sonar-project.properties)). Kalau sudah tidak dipakai, matiin server-nya dengan `docker stop sonarqube` (atau `docker rm -f sonarqube` buat hapus containernya sekalian).
+Kalau mau coba tanpa nyentuh project SonarCloud yang asli (misal buat eksperimen konfigurasi), masih bisa jalanin SonarQube Community Edition sendiri lewat Docker (`docker run -d --name sonarqube -p 9000:9000 sonarqube:community`, generate token dari `http://localhost:9000`), tapi itu butuh `sonar.host.url=http://localhost:9000` dan **hapus** `sonar.organization` dari argumen scan (properti itu cuma dikenal SonarCloud, bukan SonarQube self-hosted).
 
 k6 smoke test lokal (perlu k6 ter-install, misal `brew install k6`, dan app-nya sudah jalan di `localhost:3000`):
 
@@ -72,3 +64,5 @@ Tantangannya ada di dua bagian. Pertama, SonarQube butuh laporan coverage dalam 
 Kedua, buat k6 smoke test di CI, app-nya harus jalan dulu sebelum k6 bisa nembak endpoint-nya. Karena start app itu proses async (butuh waktu boot NestJS), aku pakai retry loop `curl` sederhana daripada nambah dependency baru (misalnya `wait-on`) cuma buat nunggu port siap — biar nggak nambah beban dependency yang harus diaudit juga.
 
 Hal yang paling nggak kesangka: awalnya aku pakai action `grafana/k6-action` buat jalanin k6 di job `k6_smoke_test`, hasilnya semua request `connection refused` walau di lokal script yang sama jalan mulus. Ternyata `grafana/k6-action` itu **Docker container action** — k6-nya jalan di container terisolasi sendiri, jadi `localhost:3000` di dalam container itu bukan network yang sama dengan runner tempat `node dist/main.js` jalan. Fix-nya ganti ke `grafana/setup-k6-action`, yang cuma install binary k6 langsung di runner, terus `k6 run` dijalanin sebagai step biasa (bukan container action) — jadi k6 dan app-nya share network yang sama persis kayak pas ditest manual di lokal.
+
+Ketiga, pas pertama kali coba scan ke SonarCloud, dapat error `You must define the following mandatory properties for 'notes-app': sonar.organization`. Ternyata SonarCloud (beda dengan SonarQube self-hosted) mewajibkan properti `sonar.organization` buat tahu project itu di bawah organisasi/akun mana — SonarQube server sendiri nggak punya konsep ini. Solusinya tinggal tambah `sonar.organization=mrzacq` di `sonar-project.properties`, diambil dari org key yang ditampilkan di dashboard SonarCloud.
