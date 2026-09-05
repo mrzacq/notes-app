@@ -20,22 +20,37 @@ npm run lint          # oxlint, harus bersih dari error
 npm run test:cov      # vitest + coverage, hasilin coverage/lcov.info
 ```
 
-SonarQube Scan lokal (opsional, buat cek sebelum push — perlu `sonar-scanner` CLI ter-install, atau pakai image Docker resminya):
+SonarQube Scan lokal (opsional, buat cek sebelum push). Di CI, `SONAR_HOST_URL` dan `SONAR_TOKEN` diambil dari secrets dan mengarah ke server SonarQube yang sudah ada. Buat run di lokal tanpa server itu, paling gampang jalanin SonarQube Community Edition sendiri lewat Docker:
 
 ```bash
-npm run test:cov      # generate coverage/lcov.info dulu
+# 1. Jalanin SonarQube server lokal (sekali aja, biarin jalan di background)
+docker run -d --name sonarqube -p 9000:9000 sonarqube:community
 
-# pakai sonar-scanner yang ter-install lokal
+# tunggu ~1 menit sampai siap, lalu buka http://localhost:9000
+# login admin/admin (bakal diminta ganti password saat login pertama)
+```
+
+Setelah itu, generate token: di UI SonarQube buka **My Account → Security → Generate Token**, simpan token-nya.
+
+```bash
+# 2. Generate coverage dulu
+npm run test:cov      # hasilin coverage/lcov.info, dibaca lewat sonar-project.properties
+
+# 3a. Scan pakai sonar-scanner yang ter-install lokal (brew install sonar-scanner)
 sonar-scanner \
-  -Dsonar.host.url=<SONAR_HOST_URL> \
-  -Dsonar.token=<SONAR_TOKEN>
+  -Dsonar.host.url=http://localhost:9000 \
+  -Dsonar.token=<TOKEN_DARI_LANGKAH_GENERATE_TOKEN>
 
-# atau tanpa install, pakai Docker image resmi
-docker run --rm -v "$(pwd):/usr/src" \
-  -e SONAR_HOST_URL=<SONAR_HOST_URL> \
-  -e SONAR_TOKEN=<SONAR_TOKEN> \
+# 3b. Atau tanpa install, pakai image Docker resmi
+docker run --rm -v "$(pwd):/usr/src" --network host \
+  -e SONAR_HOST_URL=http://localhost:9000 \
+  -e SONAR_TOKEN=<TOKEN_DARI_LANGKAH_GENERATE_TOKEN> \
   sonarsource/sonar-scanner-cli
 ```
+
+Catatan: `--network host` cuma jalan di Linux supaya container bisa nembak `localhost:9000` di host. Di Docker Desktop (Mac/Windows), ganti jadi `-e SONAR_HOST_URL=http://host.docker.internal:9000` dan hilangkan `--network host`.
+
+Hasil scan bisa dilihat di `http://localhost:9000/dashboard?id=notes-app` (sesuai `sonar.projectKey` di [sonar-project.properties](../sonar-project.properties)). Kalau sudah tidak dipakai, matiin server-nya dengan `docker stop sonarqube` (atau `docker rm -f sonarqube` buat hapus containernya sekalian).
 
 k6 smoke test lokal (perlu k6 ter-install, misal `brew install k6`, dan app-nya sudah jalan di `localhost:3000`):
 
