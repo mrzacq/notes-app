@@ -10,6 +10,18 @@ env:
   IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/notes-app
 
 jobs:
+  lint:
+    name: Lint (oxlint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
   unit_test:
     name: Unit Test
     runs-on: ubuntu-latest
@@ -20,7 +32,60 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run test
+      - run: npm run test:cov
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+
+  sonarqube_scan:
+    name: SonarQube Scan
+    needs: unit_test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage
+          path: coverage
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  k6_smoke_test:
+    name: k6 Smoke Test
+    needs: unit_test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Start app in background
+        run: node dist/main.js > app.log 2>&1 &
+      - name: Wait for app to be ready
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000/notes && exit 0
+            sleep 1
+          done
+          echo "App did not become ready in time"
+          cat app.log
+          exit 1
+      - name: Setup k6
+        uses: grafana/setup-k6-action@v1
+      - name: Run k6 smoke test
+        run: k6 run loadtest/script.js
+      - name: Show app log
+        if: always()
+        run: cat app.log || true
 
   sast:
     name: SAST (Semgrep)
@@ -60,7 +125,7 @@ jobs:
 
   build_and_push:
     name: Build & Push Docker Image
-    needs: [unit_test, sast, sca, secret_scan]
+    needs: [lint, unit_test, sast, sca, secret_scan]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
