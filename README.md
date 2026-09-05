@@ -5,3 +5,7 @@ Insight yang aku dapat, ternyata untuk project Node/TypeScript, tool security-ny
 Tantangan paling kerasa itu pas beresin hasil Trivy scan di image Docker. Awalnya masih ada beberapa vulnerability HIGH, ternyata bukan dari dependency aplikasi, tapi dari npm CLI bawaan base image node:24-alpine sendiri (brace-expansion, tar, ip-address) plus OpenSSL versi lama di Alpine. Solusinya aku hapus npm/npx/corepack dari image final karena memang nggak dipakai lagi saat runtime (cukup node buat jalanin dist), terus tambahin apk upgrade di stage terakhir biar paket OS ikut ke-patch. Setelah itu baru hasil scan-nya bersih tanpa harus bypass atau kasih exception.
 
 Hal lain yang cukup menarik, oxlint (linter bawaan Nest CLI versi baru) ternyata bisa cover rule-rule dasar ala ESLint seperti no-console, no-undef, sama no-unused-vars tanpa perlu install ESLint terpisah. Jadi nggak perlu nambah dependency lagi buat linting.
+
+---
+
+GitHub Actions gagal resolve action aquasecurity/trivy-action@0.28.0 karena tag itu memang tidak ada di repo action tersebut. Saat menulis workflow kemarin saya salah tulis versi tanpa prefix v, padahal semua tag rilis mereka pakai format v0.28.0, v0.29.0, dst (bukan 0.28.0 polos).
