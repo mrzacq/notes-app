@@ -1,0 +1,7 @@
+Notes App ini aku bikin pakai NestJS + TypeScript, jalan di Node 24. CRUD-nya simpel, disimpan in-memory, dilengkapi validasi input pakai class-validator. Selain itu aku susun CI/CD pipeline di GitHub Actions dengan job terpisah: unit test, SAST, SCA, secret scan, build & push image ke Docker Hub, sampai image scan.
+
+Insight yang aku dapat, ternyata untuk project Node/TypeScript, tool security-nya beda sama yang biasa dipakai di Python. Karena itu SAST aku pakai Semgrep (bukan Bandit), SCA pakai npm audit (bukan pip-audit). Prinsipnya tetap sama: cek kerentanan kode dan dependency sebelum image di-build, cuma tooling-nya disesuaikan sama stack yang dipakai.
+
+Tantangan paling kerasa itu pas beresin hasil Trivy scan di image Docker. Awalnya masih ada beberapa vulnerability HIGH, ternyata bukan dari dependency aplikasi, tapi dari npm CLI bawaan base image node:24-alpine sendiri (brace-expansion, tar, ip-address) plus OpenSSL versi lama di Alpine. Solusinya aku hapus npm/npx/corepack dari image final karena memang nggak dipakai lagi saat runtime (cukup node buat jalanin dist), terus tambahin apk upgrade di stage terakhir biar paket OS ikut ke-patch. Setelah itu baru hasil scan-nya bersih tanpa harus bypass atau kasih exception.
+
+Hal lain yang cukup menarik, oxlint (linter bawaan Nest CLI versi baru) ternyata bisa cover rule-rule dasar ala ESLint seperti no-console, no-undef, sama no-unused-vars tanpa perlu install ESLint terpisah. Jadi nggak perlu nambah dependency lagi buat linting.
