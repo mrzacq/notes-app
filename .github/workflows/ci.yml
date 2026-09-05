@@ -69,18 +69,23 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Start app in background
-        run: node dist/main.js &
+        run: node dist/main.js > app.log 2>&1 &
       - name: Wait for app to be ready
         run: |
           for i in $(seq 1 30); do
             curl -sf http://localhost:3000/notes && exit 0
             sleep 1
           done
-          echo "App did not become ready in time" && exit 1
+          echo "App did not become ready in time"
+          cat app.log
+          exit 1
+      - name: Setup k6
+        uses: grafana/setup-k6-action@v1
       - name: Run k6 smoke test
-        uses: grafana/k6-action@v0.3.1
-        with:
-          filename: loadtest/script.js
+        run: k6 run loadtest/script.js
+      - name: Show app log
+        if: always()
+        run: cat app.log || true
 
   sast:
     name: SAST (Semgrep)
