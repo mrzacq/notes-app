@@ -63,4 +63,16 @@ describe('NotesService', () => {
   it('should throw NotFoundException when removing a missing note', () => {
     expect(() => service.remove(999)).toThrow(NotFoundException);
   });
+
+  it('should keep existing fields when updating with an empty payload', () => {
+    const created = service.create({ title: 'Title', content: 'Content' });
+
+    const updated = service.update(created.id, {});
+
+    expect(updated.title).toBe('Title');
+    expect(updated.content).toBe('Content');
+    expect(updated.updatedAt.getTime()).toBeGreaterThanOrEqual(
+      created.updatedAt.getTime(),
+    );
+  });
 });

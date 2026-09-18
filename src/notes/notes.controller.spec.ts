@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
 import { NotesController } from './notes.controller.js';
 import { NotesService } from './notes.service.js';
 
@@ -52,5 +53,19 @@ describe('NotesController', () => {
     controller.remove(created.id);
 
     expect(service.findAll()).toHaveLength(0);
+  });
+
+  it('should throw NotFoundException when finding a missing note', () => {
+    expect(() => controller.findOne(999)).toThrow(NotFoundException);
+  });
+
+  it('should throw NotFoundException when updating a missing note', () => {
+    expect(() => controller.update(999, { title: 'Updated' })).toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('should throw NotFoundException when removing a missing note', () => {
+    expect(() => controller.remove(999)).toThrow(NotFoundException);
   });
 });
