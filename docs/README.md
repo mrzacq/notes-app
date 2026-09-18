@@ -10,10 +10,10 @@ Catatan pengerjaan tugas Notes App + CI/CD. File ini cuma buat referensi pribadi
 - [x] build_and_push pakai `needs: [...]` supaya cuma jalan kalau semua job security lulus
 - [x] Tag image `latest` dan `<commit-sha>`
 - [x] npm audit bersih tanpa flag ignore
-- [ ] Tambah secrets `DOCKERHUB_USERNAME` dan `DOCKERHUB_TOKEN` di GitHub repo
-- [ ] Pastikan repo GitHub dan Docker Hub public
-- [ ] Push dan cek minimal satu workflow run sukses di tab Actions
-- [ ] Submit link repo, link Docker Hub, dan penjelasan singkat (isi README.md di root)
+- [x] Tambah secrets `DOCKERHUB_USERNAME` dan `DOCKERHUB_TOKEN` di GitHub repo
+- [x] Pastikan repo GitHub dan Docker Hub public
+- [x] Push dan cek minimal satu workflow run sukses di tab Actions
+- [x] Submit link repo, link Docker Hub, dan penjelasan singkat (isi README.md di root)
 
 ## Command yang sering dipakai
 
